@@ -1,5 +1,6 @@
 import React from 'react'
 import { useGameStore } from '@/store/gameStore'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const PIECE_SYMBOLS: Record<string, string> = {
   'q': '♛',
@@ -21,30 +22,44 @@ export function PromotionDialog() {
   if (!pendingPromotion) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-lg font-bold mb-4">Choose promotion piece</h2>
-        <div className="grid grid-cols-2 gap-4">
-          {promotionPieces.map(({ type, label, symbol }) => (
-            <button
-              key={type}
-              onClick={() => handlePromotion(type)}
-              className="flex flex-col items-center justify-center p-4 border rounded hover:bg-gray-100"
-            >
-              <span className={`
-                text-5xl font-['Noto_Chess']
-                ${currentPlayer === 'white' 
-                  ? 'text-gray-900 filter drop-shadow-[2px_2px_2px_rgba(255,255,255,0.7)]'
-                  : 'text-black filter drop-shadow-[2px_2px_2px_rgba(255,255,255,0.7)]'
-                }
-              `}>
-                {currentPlayer === 'white' ? symbol.toUpperCase() : symbol}
-              </span>
-              <span className="mt-2 text-sm font-medium">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        className="fixed inset-0 flex items-center justify-center z-50"
+      >
+        <div className="absolute inset-0 bg-black/50" onClick={() => {/* prevent clicks through */}} />
+        <motion.div
+          className="relative bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl"
+          initial={{ y: -20 }}
+          animate={{ y: 0 }}
+        >
+          <h2 className="text-lg font-bold mb-3 text-gray-900 dark:text-white text-center">
+            Choose promotion piece
+          </h2>
+          <div className="grid grid-cols-4 gap-2">
+            {promotionPieces.map(({ type, label, symbol }) => (
+              <button
+                key={type}
+                onClick={() => handlePromotion(type)}
+                className="flex flex-col items-center justify-center p-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title={label}
+              >
+                <span className={`
+                  text-4xl font-['Noto_Chess']
+                  ${currentPlayer === 'white' 
+                    ? 'text-gray-900 dark:text-white' 
+                    : 'text-black dark:text-gray-900'
+                  }
+                `}>
+                  {currentPlayer === 'white' ? symbol.toUpperCase() : symbol}
+                </span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   )
 } 

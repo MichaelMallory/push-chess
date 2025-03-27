@@ -112,8 +112,17 @@ export const useGameStore = create<GameState>((set, get) => ({
         // Check if it's a diagonal move by comparing file (column) letters
         const isDiagonalMove = from[0] !== to[0]
 
-        // If it's a diagonal move (capture), don't try to push
+        // Check if this would be a promotion move
+        const isPromotionMove = (piece.color === 'w' && to[1] === '8') || (piece.color === 'b' && to[1] === '1')
+
+        // If it's a diagonal move (capture)
         if (isDiagonalMove) {
+          // If it's also a promotion, set pending promotion first
+          if (isPromotionMove) {
+            set({ pendingPromotion: { from, to } })
+            return
+          }
+          // Otherwise, make the capture move
           success = game.move({ from, to }) !== null
           console.log('Pawn capture executed:', { from, to, success })
         } else {
@@ -123,6 +132,11 @@ export const useGameStore = create<GameState>((set, get) => ({
             success = game.pushMove(from, to)
             console.log('Pawn push move executed:', { from, to, success })
           } else {
+            // If it's a regular move that would result in promotion
+            if (isPromotionMove) {
+              set({ pendingPromotion: { from, to } })
+              return
+            }
             success = game.move({ from, to }) !== null
             console.log('Regular pawn move executed:', { from, to, success })
           }
@@ -245,23 +259,23 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (!game || !pendingPromotion) return
 
     try {
-      // First remove the pawn
-      game.remove(pendingPromotion.to)
-      // Then place the promoted piece
-      const color = currentPlayer === 'white' ? 'w' : 'b'
-      game.put({ type: pieceType, color }, pendingPromotion.to)
+      // Make the move with promotion
+      const success = game.move({
+        from: pendingPromotion.from,
+        to: pendingPromotion.to,
+        promotion: pieceType
+      }) !== null
 
-      // Clear both the game's internal promotion state and our store's state
-      // @ts-ignore - Accessing custom property
-      game._pendingPromotion = null
+      if (!success) {
+        console.error('Failed to make promotion move:', { from: pendingPromotion.from, to: pendingPromotion.to, pieceType })
+        return
+      }
+
+      // Clear pending promotion
       set({ pendingPromotion: null })
 
       // Get the next player
       const nextPlayer = currentPlayer === 'white' ? 'black' : 'white'
-      
-      // Switch to next player's turn
-      // @ts-ignore - Accessing protected property
-      game._turn = nextPlayer === 'white' ? 'w' : 'b'
       
       // Check if the move put the opponent in check
       const isCheck = game.isOpponentInCheck()
@@ -292,9 +306,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     } catch (error) {
       console.error('Failed to promote pawn:', error)
-      // If promotion fails, make sure to clear both states
-      // @ts-ignore - Accessing custom property
-      game._pendingPromotion = null
+      // Clear pending promotion on error
       set({ pendingPromotion: null })
     }
   },
